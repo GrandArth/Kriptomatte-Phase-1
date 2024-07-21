@@ -8,6 +8,7 @@ import random
 import pymmh3 as mmh3
 from kripto_datatypes import ExrDtype, pixel_dtype, numpy_dtype
 from kripto_logger import Setup_Logger
+import ctypes
 
 CRYPTO_METADATA_LEGAL_PREFIX = ["exr/cryptomatte/", "cryptomatte/"]
 CRYPTO_METADATA_DEFAULT_PREFIX = CRYPTO_METADATA_LEGAL_PREFIX[1]
@@ -20,8 +21,8 @@ def Get_Window_Shape(window_type: str, input_header):
     current_window = input_header[window_type]
     current_window_width = current_window.max.x - current_window.min.x + 1
     current_window_height = current_window.max.y - current_window.min.y + 1
-    current_window_shape = (current_window_width, current_window_height)
-    root_logger.info(f"The size of {window_type} is {current_window_width}x{current_window_height}")
+    current_window_shape = (current_window_height, current_window_width)
+    root_logger.info(f"The size of {window_type} is {current_window_height} x {current_window_width}")
     return current_window_shape
 
 
@@ -51,15 +52,26 @@ def identify_channels(input_header, input_name):
     gets sorted channels, such as cryptoObject00, cryptoObject01, cryptoObject02
     """
     input_name = input_name.decode('utf-8')
-    channel_list = list(input_header['channels'].keys())
+    naming_scheme = False
+    channel_list = Get_Channels_List_From_Header(input_header)
     # regex for "cryptoObject" + digits + ending with .red or .r
-    channel_regex = re.compile(r'({name}\d+)\.(?:red|r|R)$'.format(name=input_name))
+    channel_regex = re.compile(r'({name}\d+)\.(red|r|R)$'.format(name=input_name))
     pure_channels = []
     for channel in channel_list:
         match = channel_regex.match(channel)
         if match:
             pure_channels.append(match.group(1))
-    return sorted(pure_channels)
+            if not naming_scheme:
+                naming_scheme = match.group(2)
+            else:
+                assert naming_scheme == match.group(2), ("This EXR File seems to contain different "
+                                                         "Naming Scheme for Cryptomatte (R/r/red)")
+    return sorted(pure_channels), naming_scheme
+
+
+def Get_Channels_List_From_Header(input_header):
+    channel_list = list(input_header['channels'].keys())
+    return channel_list
 
 
 def resolve_manifest_paths(exr_path, sidecar_path):
@@ -70,12 +82,12 @@ def resolve_manifest_paths(exr_path, sidecar_path):
     return os.path.normpath(joined)
 
 
-def Load_inFile_Manifest(input_cryptomattes, selection):
+def Load_inFile_Manifest(input_cryptomattes, metadata_id):
     try:
-        manifest_bytes = input_cryptomattes[selection]['manifest']
+        manifest_bytes = input_cryptomattes[metadata_id]['manifest']
     except KeyError:
-        root_logger.warning(f'Input Cryptomattes dose not have {selection}?')
-        root_logger.warning(f'Cryptomattes {selection} dose not have keyword [manifest]?')
+        root_logger.warning(f'Input Cryptomattes dose not have {metadata_id}?')
+        root_logger.warning(f'Cryptomattes {metadata_id} dose not have keyword [manifest]?')
         raise KeyError
     manifest_string = manifest_bytes.decode('utf-8')
     # Convert JSON string to dictionary
@@ -83,36 +95,23 @@ def Load_inFile_Manifest(input_cryptomattes, selection):
     return manifest_dict
 
 
-def parse_manifest(input_cryptomattes, selection, var_exr_file_path):
+def parse_manifest(input_cryptomattes, metadata_id, var_exr_file_path):
     """ Loads json manifest and unpacks hex strings into floats,
     and converts it to two dictionaries, which map IDs to names and vice versa.
     Also caches the last manifest in a global variable so that a session of selecting
     things does not constantly require reloading the manifest (' ~0.13 seconds for a
     32,000 name manifest.')
     """
-    num = selection
-    manifest = {}
+    manifest = Get_Manifest_From_Cryptomattes(input_cryptomattes, metadata_id, var_exr_file_path)
 
-    manif_file = input_cryptomattes[num].get("manif_file", False)  # If no manif_file return false
-    if manif_file:
-        root_logger.info("Side car manifest detected in EXR file, loading external file.")
-        manif_file = manif_file.decode('utf-8')
-        root_logger.info(f"External manif_file name {manif_file}")
-        manif_file = resolve_manifest_paths(var_exr_file_path, manif_file)
-        root_logger.info(f"Full EXR file path is {manif_file}")
+    from_ids, from_names = Compute_ids_for_items_in_manifest(manifest)
 
-    if manif_file:
-        if os.path.exists(manif_file):
-            with open(manif_file) as json_data:
-                manifest = json.load(json_data)
-        else:
-            print("Cryptomatte: Unable to find manifest file: ", manif_file)
-    else:
-        manifest = Load_inFile_Manifest(input_cryptomattes, selection)
+    return manifest, from_names, from_ids
 
+
+def Compute_ids_for_items_in_manifest(manifest):
     from_names = {}
     from_ids = {}
-
     unpacker = struct.Struct('=f')
     packer = struct.Struct("=I")
     for name, value in manifest.items():
@@ -122,11 +121,27 @@ def parse_manifest(input_cryptomattes, selection, var_exr_file_path):
         name_str = name if type(name) is str else name.encode("utf-8")
         from_names[name_str] = id_float
         from_ids[id_float] = name_str
+    return from_ids, from_names
 
-    input_cryptomattes[num]["names_to_IDs"] = from_names
-    input_cryptomattes[num]["ids_to_names"] = from_ids
 
-    return from_names, from_ids
+def Get_Manifest_From_Cryptomattes(input_cryptomattes, metadata_id, var_exr_file_path):
+    manifest = {}
+    manifest_file = input_cryptomattes[metadata_id].get("manif_file", False)  # If no manif_file return false
+    if manifest_file:
+        root_logger.info("Side car manifest detected in EXR file, loading external file.")
+        manifest_file = manifest_file.decode('utf-8')
+        root_logger.info(f"External manif_file name {manifest_file}")
+        manifest_file = resolve_manifest_paths(var_exr_file_path, manifest_file)
+        root_logger.info(f"Full EXR file path is {manifest_file}")
+    if manifest_file:
+        if os.path.exists(manifest_file):
+            with open(manifest_file) as json_data:
+                manifest = json.load(json_data)
+        else:
+            root_logger.error("Cryptomatte: Unable to find manifest file: ", manifest_file)
+    else:
+        manifest = Load_inFile_Manifest(input_cryptomattes, metadata_id)
+    return manifest
 
 
 def mm3hash_float(input_name):
@@ -143,6 +158,12 @@ def name_to_ID(input_name):
     return mm3hash_float(input_name)
 
 
+def id_to_rgb(id):
+    # This takes the hashed id and converts it to a preview color
+    bits = ctypes.cast(ctypes.pointer(ctypes.c_float(id)), ctypes.POINTER(ctypes.c_uint32)).contents.value
+    mask = 2 ** 32 - 1
+    return [0.0, float((bits << 8) & mask) / float(mask), float((bits << 16) & mask) / float(mask)]
+
 def get_channel_precision(input_header, channel_name: str):
     """Get the precision of a channel within the EXR"""
     if channel_name not in input_header['channels']:
@@ -156,93 +177,86 @@ def get_channel_precision(input_header, channel_name: str):
             return exr_d
 
 
-def read_channel(input_exr_file, input_header, channel_name: str, exr_window_shape,
-                 cast_dtype: [ExrDtype] = None) -> np.ndarray:
+def read_channel(input_exr_file, input_header, channel_name: str, exr_window_shape) -> np.ndarray:
     chan_dtype = get_channel_precision(input_header, channel_name)
-    np_type = numpy_dtype[chan_dtype]
+    if chan_dtype.name == 'FLOAT16':
+        root_logger.warning(f"{channel_name} seems to have 16bit precision.")
+        root_logger.warning(f"But Crypto implementation should have 32bit precision.")
+        root_logger.warning(f"This Script only decode 32bit. "
+                            f"Though error will SURELY occur, Script will try to decode using 16bit.")
+        root_logger.warning(f"If possible, plz output exr files in 32bit.")
+        np_type = numpy_dtype[ExrDtype.FLOAT16]
+    else:
+        np_type = numpy_dtype[chan_dtype]
     channel_arr = np.frombuffer(input_exr_file.channel(channel_name), dtype=np_type)
     channel_arr = channel_arr.reshape(exr_window_shape)
     channel_arr = channel_arr.copy()  # Arrays read from buffers can be read-only
 
-    if cast_dtype is not None:
-        if not isinstance(cast_dtype, ExrDtype):
-            raise ValueError(f"Expected type {ExrDtype.__name__}. Got: {type(cast_dtype)}")
-        channel_arr = channel_arr.astype(numpy_dtype[cast_dtype])
-
     return channel_arr
 
 
-def read_all_channels_in_list(input_exr_file, channel_list,
-                              input_header, exr_window_shape,
-                              cast_dtype: [ExrDtype] = None):
+def read_all_channels_in_list(input_exr_file, channel_group_list,
+                              input_header, exr_window_shape):
     list_of_read_channels = []
-    for each_channel in channel_list:
+    for each_RGBA_group_of_channel in channel_group_list:
         list_of_read_channels.append(read_channel(input_exr_file, input_header,
-                                                  each_channel,
-                                                  exr_window_shape,
-                                                  cast_dtype))
+                                                  each_RGBA_group_of_channel['R'],
+                                                  exr_window_shape))
+        list_of_read_channels.append(read_channel(input_exr_file, input_header,
+                                                  each_RGBA_group_of_channel['G'],
+                                                  exr_window_shape))
+        list_of_read_channels.append(read_channel(input_exr_file, input_header,
+                                                  each_RGBA_group_of_channel['B'],
+                                                  exr_window_shape))
+        list_of_read_channels.append(read_channel(input_exr_file, input_header,
+                                                  each_RGBA_group_of_channel['A'],
+                                                  exr_window_shape))
     return list_of_read_channels
 
 
-def get_coverage_for_rank(float_id: float, cr_combined: np.ndarray, rank: int) -> np.ndarray:
+def get_coverage_for_rank(float_id: float, combined_cryptomattes: np.ndarray, rank: int) -> np.ndarray:
     """
     Get the coverage mask for a given rank from cryptomatte layers
 
     Args:
         float_id (float32): The ID of the object
-        cr_combined (numpy.ndarray): The cryptomatte layers combined into a single array along the channels axis.
-                                     By default, there are 3 layers, corresponding to a level of 6.
+        combined_cryptomattes (numpy.ndarray):
+        The cryptomatte layers combined into a single array along the channels axis.
+        By default, there are 3 layers, corresponding to a level of 6.
         rank (int): The rank, or level, of the coverage to be calculated
-
     Returns:
         numpy.ndarray: Mask for given coverage rank. Dtype: np.float32, Range: [0, 1]
     """
-    id_rank = cr_combined[:, :, rank * 2] == float_id
-    coverage_rank = cr_combined[:, :, rank * 2 + 1] * id_rank
+    id_rank = combined_cryptomattes[:, :, rank * 2] == float_id
+    coverage_rank = combined_cryptomattes[:, :, rank * 2 + 1] * id_rank
 
     return coverage_rank
 
 
-def get_mask_for_id(obj_hex_id: str, channels_arr: np.ndarray, level: int = 6) -> np.ndarray:
-    """
-    Extract mask corresponding to a float id from the cryptomatte layers
-
-    Args:
-        obj_hex_id (str): The ID of the object (from manifest).
-        channels_arr (numpy.ndarray): The cryptomatte layers combined into a single array along the channels axis.
-                                     Each layer should be in acsending order with it's channels in RGBA order.
-                                     By default, there are 3 layers, corresponding to a level of 6.
-        level (int): The Level of the Cryptomatte. Default is 6 for most rendering engines. The level dictates the
-                     max num of objects that the crytomatte can represent. The number of cryptomatte layers in EXR
-                     will change depending on level.
-
-    Returns:
-        numpy.ndarray: Mask from cryptomatte for a given id. Dtype: np.uint8, Range: [0, 255]
-    """
-    float_id = name_to_ID(obj_hex_id)
-
+def get_mask_for_id(obj_float_id, channels_arr: np.ndarray, level: int = 6) -> np.ndarray:
     coverage_list = []
     for rank in range(level):
-        coverage_rank = get_coverage_for_rank(float_id, channels_arr, rank)
+        coverage_rank = get_coverage_for_rank(obj_float_id, channels_arr, rank)
         coverage_list.append(coverage_rank)
     coverage = sum(coverage_list)
     coverage = np.clip(coverage, 0.0, 1.0)
     mask = (coverage * 255).astype(np.uint8)
+    # No thresholding will be doing here, cause some might need the transparency.
     return mask
 
 
-def Get_Names_for_ALl_Sub_Crypto_channel(crypto_channels, name_type="UpSingle"):
+def Get_Names_for_ALl_Sub_Crypto_channel(crypto_channels, name_type="R"):
     list_of_sub_crypto_channels = []
-    if name_type == "UpSingle":
+    if name_type == "R":
         for each_channel_prefix in crypto_channels:
             crypto_channel_RGBA_dict = {
-                "R":f"{each_channel_prefix}.R",
+                "R": f"{each_channel_prefix}.R",
                 "G": f"{each_channel_prefix}.G",
                 "B": f"{each_channel_prefix}.B",
                 "A": f"{each_channel_prefix}.A"
             }
             list_of_sub_crypto_channels.append(crypto_channel_RGBA_dict)
-    elif name_type == "SmallSingle":
+    elif name_type == "r":
         for each_channel_prefix in crypto_channels:
             crypto_channel_RGBA_dict = {
                 "R": f"{each_channel_prefix}.r",
@@ -251,7 +265,7 @@ def Get_Names_for_ALl_Sub_Crypto_channel(crypto_channels, name_type="UpSingle"):
                 "A": f"{each_channel_prefix}.a",
             }
             list_of_sub_crypto_channels.append(crypto_channel_RGBA_dict)
-    elif name_type == "Full":
+    elif name_type == "red":
         for each_channel_prefix in crypto_channels:
             crypto_channel_RGBA_dict = {
                 "R": f"{each_channel_prefix}.red",
@@ -261,18 +275,16 @@ def Get_Names_for_ALl_Sub_Crypto_channel(crypto_channels, name_type="UpSingle"):
             }
             list_of_sub_crypto_channels.append(crypto_channel_RGBA_dict)
     else:
-        root_logger.warning(f"No crypto channel naming scheme (A|a|alpha?) provide, default to (A)")
+        root_logger.warning(f"No crypto channel naming scheme (R|r|red?) provide, default to (R)")
         for each_channel_prefix in crypto_channels:
             crypto_channel_RGBA_dict = {
-                "R":f"{each_channel_prefix}.R",
+                "R": f"{each_channel_prefix}.R",
                 "G": f"{each_channel_prefix}.G",
                 "B": f"{each_channel_prefix}.B",
                 "A": f"{each_channel_prefix}.A"
             }
             list_of_sub_crypto_channels.append(crypto_channel_RGBA_dict)
     return list_of_sub_crypto_channels
-
-
 
 
 def get_masks_for_all_objs(var_exr, var_cryptomattes, var_header, var_crypto_matte_id: str, var_window_shape):
@@ -292,9 +304,10 @@ def get_masks_for_all_objs(var_exr, var_cryptomattes, var_header, var_crypto_mat
         raise KeyError(f"name2ID not found in cryptomatte {var_crypto_matte_id}.")
 
     crypto_channels = var_cryptomattes[var_crypto_matte_id]['channels']
-    crypto_channels_rgba = Get_Names_for_ALl_Sub_Crypto_channel(crypto_channels, "UpSingle")
+    crypto_naming_scheme = var_cryptomattes[var_crypto_matte_id]['naming_scheme']
+    crypto_channels_rgba_groups = Get_Names_for_ALl_Sub_Crypto_channel(crypto_channels, name_type=crypto_naming_scheme)
     channels_arr = np.stack(read_all_channels_in_list(input_exr_file=var_exr,
-                                                      channel_list=crypto_channels_rgba,
+                                                      channel_group_list=crypto_channels_rgba_groups,
                                                       input_header=var_header,
                                                       exr_window_shape=var_window_shape), axis=-1)
 
@@ -306,8 +319,8 @@ def get_masks_for_all_objs(var_exr, var_cryptomattes, var_header, var_crypto_mat
     # Each obj is assigned a unique ID (per image) for the mask
     obj_names = sorted(manifest.keys())
     for obj_name in obj_names:
-        obj_hex_id = manifest[obj_name]
-        mask = get_mask_for_id(obj_hex_id, channels_arr, num_level)
+        object_float_id = manifest[obj_name]
+        mask = get_mask_for_id(object_float_id, channels_arr, num_level)
         yield obj_name, mask
 
 
@@ -317,24 +330,10 @@ def Get_Quantity_of_Cryptolayers(crypto_channels):
     return num_layers, num_level
 
 
-def get_combined_mask(var_crypto_matte_id: str):
-    """
-    Get a single mask for semantic segmentation representing all the objects within the scene.
-    Each object is represented by a unique integer value, starting from 1. 0 is reserved for background.
+def get_combined_mask(var_exr, var_cryptomattes, var_header, var_crypto_matte_id: str, var_window_shape):
+    obj_masks = get_masks_for_all_objs(var_exr, var_cryptomattes, var_header, var_crypto_matte_id: str, var_window_shape)
 
-    Args:
-        var_crypto_matte_id: The name of the cryptomatte definition from which to extract masks
-
-    Returns:
-        numpy.ndarray: Mask of all objects. Shape: [H, W], dtype: np.uint16.
-        dict: Mapping of the object names to mask IDs for this image.
-    """
-    obj_masks = get_masks_for_all_objs(var_crypto_matte_id)
-
-    best = None
-    total = None
     mask_combined = None
-    name_to_mask_id_map = {"background": 0}
 
     for (idx, (obj_name, obj_mask)) in enumerate(obj_masks):
         name_to_mask_id_map[obj_name] = idx + 1
