@@ -16,4 +16,3 @@ def Setup_Logger():
     root_logger.addHandler(console_handler)
     root_logger.setLevel(logging.DEBUG)
 
-Setup_Logger()
