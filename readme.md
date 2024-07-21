@@ -22,6 +22,13 @@ Make a Python plugin for Krita.
 
 Upon initial inspection, I believe after Phase 2, implementation in Krita should be simple (Push the results to layers with whatever code that dose the thing.). That being said, I have no experience with QT, so I plan to do these in the last Phase. Meanwhile, I do hope ppl have more experience with Python plugin can help bring the Phase 1 code to krita real soon.
 
+
+# Usage
+
+```python
+python kripto_decode.py -i "path_2_exr_file"
+```
+
 # Reference
 ```ref
 Friedman, Jonah, and Andrew C. Jones. 2015. “Fully Automatic ID Mattes with Support for Motion Blur and Transparency.” In ACM SIGGRAPH 2015 Posters, 1–1. Los Angeles California: ACM. https://doi.org/10.1145/2787626.2787629.
