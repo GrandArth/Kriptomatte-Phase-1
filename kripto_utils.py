@@ -2,9 +2,7 @@ import json
 import os
 import re
 import struct
-import colorsys
 import numpy as np
-import random
 import pymmh3 as mmh3
 from kripto_datatypes import ExrDtype, pixel_dtype, numpy_dtype
 from kripto_logger import Setup_Logger
@@ -331,10 +329,11 @@ def Get_Quantity_of_Cryptolayers(crypto_channels):
 
 
 def get_combined_mask(var_exr, var_cryptomattes, var_header, var_crypto_matte_id: str, var_window_shape):
-    obj_masks = get_masks_for_all_objs(var_exr, var_cryptomattes, var_header, var_crypto_matte_id: str, var_window_shape)
-
+    obj_masks = get_masks_for_all_objs(var_exr, var_cryptomattes, var_header, var_crypto_matte_id, var_window_shape)
+    best = None
+    total = None
     mask_combined = None
-
+    name_to_mask_id_map = {}
     for (idx, (obj_name, obj_mask)) in enumerate(obj_masks):
         name_to_mask_id_map[obj_name] = idx + 1
         if mask_combined is None:
@@ -344,33 +343,20 @@ def get_combined_mask(var_exr, var_cryptomattes, var_header, var_crypto_matte_id
         if total is None:
             total = np.zeros_like(obj_mask)
 
-        total += obj_mask
+        # total += obj_mask
         mask_combined[obj_mask > best] = idx + 1
         best = np.max([best, obj_mask], axis=0)
 
-    mask_combined[255 - total > best] = 0
+    # mask_combined[255 - total > best] = 0
 
     return mask_combined, name_to_mask_id_map
 
 
-def random_color():
-    hue = random.random()
-    sat, val = 0.7, 0.7
-    r, g, b = colorsys.hsv_to_rgb(hue, sat, val)
-    rgb = []
-    for col in [r, g, b]:
-        col_np = np.array(col, dtype=np.float32)
-        col_np = (np.clip(col_np * 255, 0, 255)).astype(np.uint8)
-        col_list = col_np.tolist()
-        rgb.append(col_list)
-    return rgb
-
-
-def apply_random_colormap_to_mask(mask_combined: np.ndarray) -> np.ndarray:
+def apply_random_colormap_to_mask(mask_combined, var_random_color) -> np.ndarray:
     """
     Apply random colors to each segment in the mask, for visualization
     """
     num_objects = mask_combined.max() + 1
-    colors = [[0, 0, 0]] + [random_color() for _ in range(num_objects - 1)]  # Background is fixed color: black
+    colors = [var_random_color.random_color() for _ in range(num_objects)]  # Background is fixed color: black
     mask_combined_rgb = np.take(colors, mask_combined, 0)
     return mask_combined_rgb.astype(np.uint8)

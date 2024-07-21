@@ -4,8 +4,9 @@ from PIL import Image
 import numpy as np
 
 from kripto_utils import Get_Window_Shape, Get_Cryptomattes_From_Header, identify_channels, parse_manifest, \
-    get_masks_for_all_objs, id_to_rgb, get_combined_mask
+    get_masks_for_all_objs, id_to_rgb, get_combined_mask, apply_random_colormap_to_mask
 from kripto_logger import Setup_Logger
+from kripto_color import RandomColor
 
 logger = Setup_Logger()
 exr_file_path = "sample.exr"
@@ -101,4 +102,17 @@ for metadata_id, metadata_dictionary in cryptomattes.items():
             # Convert to RGBA format
             crypto_mask_image = Image.fromarray(object_crypto_mask, mode='RGBA')
             crypto_mask_image.save(os.path.join(f"{crypto_layer_folder}", f"{object_name}_mask.png"))
-    get_combined_mask(metadata_id)
+
+    logger.info("Computing combined mask.")
+    combined_mask, name_to_mask_id_map = get_combined_mask(var_exr=sample_exr, var_cryptomattes=cryptomattes,
+                                                           var_header=header, var_crypto_matte_id=metadata_id,
+                                                           var_window_shape=dataWindow_shape)
+    logger.info(f"Assigning Random Color to Object")
+    random_color_generator = RandomColor(0, 0, 0.07)
+    colored_combined_mask = apply_random_colormap_to_mask(mask_combined=combined_mask,
+                                                          var_random_color=random_color_generator)
+    crypto_mask_image = Image.fromarray(colored_combined_mask, mode='RGB')
+    logger.info(f"Writing Combined Mask to {os.path.dirname(exr_file_path)}"
+                f" / {crypto_layer_name.decode('utf-8')}_mask.png")
+    crypto_mask_image.save(os.path.join(f"{os.path.dirname(exr_file_path)}",
+                                        f"{crypto_layer_name.decode('utf-8')}_mask.png"))

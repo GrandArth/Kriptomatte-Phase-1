@@ -13,6 +13,6 @@ def Setup_Logger():
     file_handler.setFormatter(formatter)
     root_logger = logging.getLogger()
     root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
+    # root_logger.addHandler(console_handler)
     root_logger.setLevel(logging.DEBUG)
     return root_logger
