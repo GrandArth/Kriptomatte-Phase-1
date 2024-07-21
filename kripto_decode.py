@@ -2,13 +2,15 @@ import os.path
 import OpenEXR
 from PIL import Image
 import numpy as np
-
+import logging
 from kripto_utils import Get_Window_Shape, Get_Cryptomattes_From_Header, identify_channels, parse_manifest, \
     get_masks_for_all_objs, id_to_rgb, get_combined_mask, apply_random_colormap_to_mask
-from kripto_logger import Setup_Logger
+import kripto_logger
 from kripto_color import RandomColor
 
-logger = Setup_Logger()
+
+logger = logging.getLogger(__name__)
+
 exr_file_path = "sample.exr"
 logger.info("Reading Sample Exr file")
 sample_exr = OpenEXR.InputFile(exr_file_path)

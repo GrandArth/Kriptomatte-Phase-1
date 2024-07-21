@@ -5,41 +5,42 @@ import struct
 import numpy as np
 import pymmh3 as mmh3
 from kripto_datatypes import ExrDtype, pixel_dtype, numpy_dtype
-from kripto_logger import Setup_Logger
 import ctypes
+import logging
+
 
 CRYPTO_METADATA_LEGAL_PREFIX = ["exr/cryptomatte/", "cryptomatte/"]
 CRYPTO_METADATA_DEFAULT_PREFIX = CRYPTO_METADATA_LEGAL_PREFIX[1]
 
-root_logger = Setup_Logger()
+logger = logging.getLogger(__name__)
 
 
 def Get_Window_Shape(window_type: str, input_header):
-    root_logger.info(f"Reading {window_type} Size Information")
+    logger.info(f"Reading {window_type} Size Information")
     current_window = input_header[window_type]
     current_window_width = current_window.max.x - current_window.min.x + 1
     current_window_height = current_window.max.y - current_window.min.y + 1
     current_window_shape = (current_window_height, current_window_width)
-    root_logger.info(f"The size of {window_type} is {current_window_height} x {current_window_width}")
+    logger.info(f"The size of {window_type} is {current_window_height} x {current_window_width}")
     return current_window_shape
 
 
 def Get_Cryptomattes_From_Header(exr_header):
     temp_cryptomattes = {}
-    root_logger.info("Getting all cryptomattes")
+    logger.info("Getting all cryptomattes")
     for key, value in exr_header.items():
         for prefix in CRYPTO_METADATA_LEGAL_PREFIX:
             if not key.startswith(prefix):
                 continue
             numbered_key = key[len(prefix):]
-            root_logger.info(f"Trimming prefix {key} to {numbered_key}")
+            logger.info(f"Trimming prefix {key} to {numbered_key}")
             metadata_id, partial_key = numbered_key.split("/")
-            root_logger.info(f"Split {numbered_key} to {metadata_id} and {partial_key}")
+            logger.info(f"Split {numbered_key} to {metadata_id} and {partial_key}")
             if metadata_id not in temp_cryptomattes:
-                root_logger.info(f"Adding key: {metadata_id} to cryptomattes.")
+                logger.info(f"Adding key: {metadata_id} to cryptomattes.")
                 temp_cryptomattes[metadata_id] = {}
             temp_cryptomattes[metadata_id][partial_key] = value
-            root_logger.info(f"Assigning {type(value)} value of length {len(value)} to {metadata_id}/{partial_key}")
+            logger.info(f"Assigning {type(value)} value of length {len(value)} to {metadata_id}/{partial_key}")
             temp_cryptomattes[metadata_id]['md_prefix'] = prefix
             break
     return temp_cryptomattes
@@ -84,8 +85,8 @@ def Load_inFile_Manifest(input_cryptomattes, metadata_id):
     try:
         manifest_bytes = input_cryptomattes[metadata_id]['manifest']
     except KeyError:
-        root_logger.warning(f'Input Cryptomattes dose not have {metadata_id}?')
-        root_logger.warning(f'Cryptomattes {metadata_id} dose not have keyword [manifest]?')
+        logger.warning(f'Input Cryptomattes dose not have {metadata_id}?')
+        logger.warning(f'Cryptomattes {metadata_id} dose not have keyword [manifest]?')
         raise KeyError
     manifest_string = manifest_bytes.decode('utf-8')
     # Convert JSON string to dictionary
@@ -126,17 +127,17 @@ def Get_Manifest_From_Cryptomattes(input_cryptomattes, metadata_id, var_exr_file
     manifest = {}
     manifest_file = input_cryptomattes[metadata_id].get("manif_file", False)  # If no manif_file return false
     if manifest_file:
-        root_logger.info("Side car manifest detected in EXR file, loading external file.")
+        logger.info("Side car manifest detected in EXR file, loading external file.")
         manifest_file = manifest_file.decode('utf-8')
-        root_logger.info(f"External manif_file name {manifest_file}")
+        logger.info(f"External manif_file name {manifest_file}")
         manifest_file = resolve_manifest_paths(var_exr_file_path, manifest_file)
-        root_logger.info(f"Full EXR file path is {manifest_file}")
+        logger.info(f"Full EXR file path is {manifest_file}")
     if manifest_file:
         if os.path.exists(manifest_file):
             with open(manifest_file) as json_data:
                 manifest = json.load(json_data)
         else:
-            root_logger.error("Cryptomatte: Unable to find manifest file: ", manifest_file)
+            logger.error("Cryptomatte: Unable to find manifest file: ", manifest_file)
     else:
         manifest = Load_inFile_Manifest(input_cryptomattes, metadata_id)
     return manifest
@@ -178,11 +179,11 @@ def get_channel_precision(input_header, channel_name: str):
 def read_channel(input_exr_file, input_header, channel_name: str, exr_window_shape) -> np.ndarray:
     chan_dtype = get_channel_precision(input_header, channel_name)
     if chan_dtype.name == 'FLOAT16':
-        root_logger.warning(f"{channel_name} seems to have 16bit precision.")
-        root_logger.warning(f"But Crypto implementation should have 32bit precision.")
-        root_logger.warning(f"This Script only decode 32bit. "
+        logger.warning(f"{channel_name} seems to have 16bit precision.")
+        logger.warning(f"But Crypto implementation should have 32bit precision.")
+        logger.warning(f"This Script only decode 32bit. "
                             f"Though error will SURELY occur, Script will try to decode using 16bit.")
-        root_logger.warning(f"If possible, plz output exr files in 32bit.")
+        logger.warning(f"If possible, plz output exr files in 32bit.")
         np_type = numpy_dtype[ExrDtype.FLOAT16]
     else:
         np_type = numpy_dtype[chan_dtype]
@@ -273,7 +274,7 @@ def Get_Names_for_ALl_Sub_Crypto_channel(crypto_channels, name_type="R"):
             }
             list_of_sub_crypto_channels.append(crypto_channel_RGBA_dict)
     else:
-        root_logger.warning(f"No crypto channel naming scheme (R|r|red?) provide, default to (R)")
+        logger.warning(f"No crypto channel naming scheme (R|r|red?) provide, default to (R)")
         for each_channel_prefix in crypto_channels:
             crypto_channel_RGBA_dict = {
                 "R": f"{each_channel_prefix}.R",
