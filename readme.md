@@ -2,9 +2,11 @@
 # Kriptomatte: Making Cryptomattes Easier for 2D Artists
 This document outlines the Kriptomatte project, which aims to bring Cryptomatte functionality to Krita, the popular open-source painting software.
 
-## What is Kriptomatte?
+## What is Kriptomatte and What is this repo?
 
-Kriptomatte is a tool that helps artists work with Cryptomattes, which are special masks embedded within EXR image files. These masks isolate objects, materials, and assets, making them easier to select and manipulate in image editing software.
+Kriptomatte is a tool that helps artists work with Cryptomattes, which are special masks embedded within EXR image files. These masks isolate objects, materials, and assets, making them easier to select and manipulate in video post-processing software. 
+
+Unfortunately, typical 2D image editing software doesn't work well with Cryptomattes, so artists often rely on ID Passes. While many popular software packages, such as Blender, lack the option to render ID passes, the codes in this repo (Kriptomatte Phase 1) offer a solution. Kriptomatte converts Cryptomatte information into ID Pass-like masks that can be used in painting software like Krita, Photoshop, and Clip Studio.
 
 ![Kriptomatte Sample.png](Kriptomatte%20Sample.png)
 
