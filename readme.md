@@ -2,6 +2,8 @@
 # Kriptomatte: Making Cryptomattes Easier for 2D Artists
 This document outlines the Kriptomatte project, which aims to bring Cryptomatte functionality to Krita, the popular open-source painting software.
 
+[中文](readme_sc.md)
+
 ## What is Kriptomatte and What is this repo?
 
 Kriptomatte is a tool that helps artists work with Cryptomattes, which are special masks embedded within EXR image files. These masks isolate objects, materials, and assets, making them easier to select and manipulate in video post-processing software. 

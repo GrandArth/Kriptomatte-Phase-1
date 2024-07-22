@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "kriptomatte"
 keywords = ["EXR","Cryptomatte"]
-version = "0.0.9"
+version = "0.0.10"
 authors = [
   { name="GrandArth", email="risiamuxms@outlook.com" },
 ]
