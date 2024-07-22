@@ -8,7 +8,7 @@ from kriptomatte import pymmh3
 from kriptomatte.kripto_color import (RandomColor,)
 from kriptomatte.kripto_datatypes import (ExrDtype, numpy_dtype, pixel_dtype,)
 from kriptomatte.kripto_decode import (Create_Folder_for_Crypto_layer, cli,
-                                       get_args, logger,)
+                                       get_args,)
 from kriptomatte.kripto_logger import (Setup_Logger,)
 from kriptomatte.kripto_utils import (CRYPTO_METADATA_DEFAULT_PREFIX,
                                       CRYPTO_METADATA_LEGAL_PREFIX,
