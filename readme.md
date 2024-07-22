@@ -8,6 +8,10 @@ Kriptomatte is a tool that helps artists work with Cryptomattes, which are speci
 
 ![Kriptomatte Sample.png](Kriptomatte%20Sample.png)
 
+Seperated Masks are also exported for a finer control.
+
+![Kriptomatte_Seperate_Mask.png](Kriptomatte_Seperate_Mask.png)
+
 ## Project Phases
 
 The Kriptomatte project is planned for four phases:
