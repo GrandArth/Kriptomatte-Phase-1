@@ -358,6 +358,7 @@ def apply_random_colormap_to_mask(mask_combined, var_random_color) -> np.ndarray
     Apply random colors to each segment in the mask, for visualization
     """
     num_objects = mask_combined.max() + 1
-    colors = [var_random_color.random_color() for _ in range(num_objects)]  # Background is fixed color: black
+    # colors = [var_random_color.random_color() for _ in range(num_objects)]  # Background is fixed color: black
+    colors = [[0, 0, 0]] + [var_random_color.random_color() for _ in range(num_objects - 1)]
     mask_combined_rgb = np.take(colors, mask_combined, 0)
     return mask_combined_rgb.astype(np.uint8)

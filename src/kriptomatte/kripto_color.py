@@ -4,18 +4,18 @@ import numpy as np
 
 
 class RandomColor:
-    def __init__(self, init_sat, init_hue, init_luma = 0.07):
+    def __init__(self, init_sat, init_hue, init_luma=0.07):
         self.init_hue = init_hue
         self.init_sat = init_sat
         self.init_luma = init_luma
         self.update_counter = 0
 
     def update_hls(self):
-        if self.update_counter % 3 == 0:
+        if self.update_counter % 3 == 2:
             self.init_hue = (self.init_hue + 0.04) % 1
         if self.update_counter % 3 == 1:
             self.init_sat = (self.init_sat + 0.14) % 1
-        if self.update_counter % 3 == 2:
+        if self.update_counter % 3 == 0:
             self.init_luma = (self.init_luma + 0.07) % 0.5 + 0.07
         self.update_counter = self.update_counter + 1
 
