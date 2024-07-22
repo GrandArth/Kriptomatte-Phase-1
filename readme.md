@@ -4,6 +4,8 @@ This document outlines the Kriptomatte project, which aims to bring Cryptomatte 
 
 [中文](readme_sc.md)
 
+[Demo Video](https://youtu.be/_VKerJcCXeE)
+
 ## What is Kriptomatte and What is this repo?
 
 Kriptomatte is a tool that helps artists work with Cryptomattes, which are special masks embedded within EXR image files. These masks isolate objects, materials, and assets, making them easier to select and manipulate in video post-processing software. 
