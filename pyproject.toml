@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kriptomatte"
+keywords = ["EXR","Cryptomatte"]
+version = "0.0.9"
+authors = [
+  { name="GrandArth", email="risiamuxms@outlook.com" },
+]
+description = "Decode Cryptomattes in EXR file to PNG masks."
+readme = "readme.md"
+requires-python = ">=3.5"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Development Status :: 1 - Planning"
+]
+dependencies = [
+  "numpy",
+  "pillow",
+  "OpenEXR",
+  "Imath"
+]
+
+[project.urls]
+Homepage = "https://github.com/GrandArth/Kriptomatte-Phase-1"
+Issues = "https://github.com/GrandArth/Kriptomatte-Phase-1/issues"
+
+[project.scripts]
+kriptomatte = "kriptomatte.kripto_decode:cli"

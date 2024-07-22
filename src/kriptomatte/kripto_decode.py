@@ -3,14 +3,14 @@ import OpenEXR
 from PIL import Image
 import numpy as np
 import logging
-from kripto_utils import Get_Window_Shape, Get_Cryptomattes_From_Header, identify_channels, parse_manifest, \
+from kriptomatte.kripto_utils import Get_Window_Shape, Get_Cryptomattes_From_Header, identify_channels, parse_manifest, \
     get_masks_for_all_objs, id_to_rgb, get_combined_mask, apply_random_colormap_to_mask
-import kripto_logger
-from kripto_color import RandomColor
+import kriptomatte.kripto_logger
+from kriptomatte.kripto_color import RandomColor
 import argparse
 from pathlib import Path
 
-kripto_logger.Setup_Logger()
+kriptomatte.kripto_logger.Setup_Logger()
 logger = logging.getLogger(__name__)
 
 
@@ -94,7 +94,8 @@ def cli():
                                                                       var_crypto_matte_id=metadata_id,
                                                                       var_window_shape=dataWindow_shape):
             if object_crypto_mask.min() == object_crypto_mask.max():
-                logger.info(f"{crypto_layer_name.decode('utf-8')}/{object_name} is not in current frame, not writing masks.")
+                logger.info(
+                    f"{crypto_layer_name.decode('utf-8')}/{object_name} is not in current frame, not writing masks.")
                 logger.info(f"It would be empty anyway.")
             else:
                 logger.info(f"Writing {object_name} mask.")
@@ -120,3 +121,7 @@ def cli():
                     f" / {crypto_layer_name.decode('utf-8')}_mask.png")
         crypto_mask_image.save(os.path.join(f"{os.path.dirname(exr_file_path)}",
                                             f"{Path(exr_base_name).stem}_{crypto_layer_name.decode('utf-8')}_mask.png"))
+
+
+if __name__ == "__main__":
+    cli()

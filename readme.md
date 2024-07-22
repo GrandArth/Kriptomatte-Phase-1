@@ -1,35 +1,62 @@
-# Kriptomatte Phase 1
-The goal of Kriptomatte project is to provide Krita the opensource painting software with the ability to deal wth Cryptomattes in EXR images, thus the name Kriptomatte.
+# Kriptomatte: Making Cryptomattes Easier for 2D Artists
+This document outlines the Kriptomatte project, which aims to bring Cryptomatte functionality to Krita, the popular open-source painting software.
 
-## Planing
+## What is Kriptomatte?
 
-The Kriptomatte project will be carried in 4 separate phases.
+Kriptomatte is a tool that helps artists work with Cryptomattes, which are special masks embedded within EXR image files. These masks isolate objects, materials, and assets, making them easier to select and manipulate in image editing software.
 
-### Phase 1
 
-Develop a Python script that, given an EXR file, can output combined and separated cryptomattes (which  means ID masks for Objects, Materials and Assets) in common image format that supports Alpha channel, namely PNG.
+## Project Phases
 
-In this phase, my aim is to make Cryptomattes more accessible for 2D artists in general. With a simple `pip install kriptomatte`, artists can decode properly colored PNGs from EXR render results for painting in their favorite software, whatever it is.
+The Kriptomatte project is planned for four phases:
 
-### Phase 2
+### Phase 1: Python Script (Current Phase)
 
-After Phase 1 go through testing and finalizing, I will rewrite codes in Phase 1 in C++. So that a single drag and drop executable can be built. The executable will be doing the exact same thing, only faster. The tool will also be more accessible, as artists won't need to have any experience with `pip` or any `terminal` in general.
+https://pypi.org/project/kriptomatte/
 
-### Phase 3a and 3b
+This phase focuses on creating a Python script that can extract Cryptomatte information from EXR files and convert it into separate, colored PNG images with alpha channels. This makes Cryptomattes more accessible to artists who can use these PNGs for painting in any software they prefer.
 
-Port the C++ code to Krita.
-Make a Python plugin for Krita.
+### Phase 2: Standalone Executable
 
-Upon initial inspection, I believe after Phase 2, implementation in Krita should be simple (Push the results to layers with whatever code that dose the thing.). That being said, I have no experience with QT, so I plan to do these in the last Phase. Meanwhile, I do hope ppl have more experience with Python plugin can help bring the Phase 1 code to krita real soon.
+Phase 2 will rewrite the Python script in C++ to create a faster, standalone executable program. This program won't require any command-line experience; artists can simply drag and drop their EXR files onto the executable to generate the PNGs.
+
+### Phase 3a & 3b: Krita Integration
+
+The final phases involve integrating Kriptomatte functionality directly into Krita. Phase 3a will focus on creating a C++ port of the code, while Phase 3b will develop a Python plugin for Krita.
 
 
 # Usage
 
-```python
-python kripto_decode.py -i "path_2_exr_file"
+## Installation 
+
+You can install the script using `pip` from your **command prompt** (also known as a **terminal**). If you're unfamiliar with the concept, think of it as a special window where you type commands for your computer to execute. Here's how to open it on Windows: **hold Shift** and **right-click** on your desktop, then select **"Open PowerShell here"** or **"Open Windows Terminal here."**  Once the terminal opens, copy and paste one of the following commands to install:
+
+```bash
+python -m pip install kriptomatte
+# or
+pip install kriptomatte
 ```
 
-# Reference
+## Use from Terminal
+
+After installation, you can use the script in your terminal. Open the terminal again, navigate to the directory containing your EXR file, and run the following command, replacing "path/to/your/file.exr" with the actual path to your file:
+
+To easily find the path to your EXR file on Windows, left-click it, then type `alt + 3`.
+This will copy the file location to your clipboard. You can then paste it into the command.
+If the hotkey doesn't work, you can find a light blue option to copy the file path in the top-left corner of your File Explorer.
+
+```bash
+kriptomatte -i "path to your exr file"
+# for example
+kriptomatte  -i "C:\Users\GrandArth\Pictures\sample.exr"
+```
+
+## Important Note:
+
+Currently, the script only supports Cryptomattes stored in 32-bit EXR files. Ensure your EXR files are rendered with 32-bit precision for the script to work correctly.
+
+# Code Reference
+
 ```ref
 Friedman, Jonah, and Andrew C. Jones. 2015. “Fully Automatic ID Mattes with Support for Motion Blur and Transparency.” In ACM SIGGRAPH 2015 Posters, 1–1. Los Angeles California: ACM. https://doi.org/10.1145/2787626.2787629.
 “OpenEXR Bindings for Python.” n.d. Accessed July 17, 2024. https://www.excamera.com/sphinx/articles-openexr.html.

@@ -3,8 +3,8 @@ import os
 import re
 import struct
 import numpy as np
-import pymmh3 as mmh3
-from kripto_datatypes import ExrDtype, pixel_dtype, numpy_dtype
+import kriptomatte.pymmh3 as mmh3
+from kriptomatte.kripto_datatypes import ExrDtype, pixel_dtype, numpy_dtype
 import ctypes
 import logging
 

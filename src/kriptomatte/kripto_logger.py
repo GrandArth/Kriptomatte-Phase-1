@@ -8,7 +8,7 @@ def Setup_Logger():
     console_handler = StreamHandler()
     console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
-    file_handler = RotatingFileHandler("../Testing.log", "a", maxBytes=1024 * 1024 * 5, backupCount=1)
+    file_handler = RotatingFileHandler("../../Testing.log", "a", maxBytes=1024 * 1024 * 5, backupCount=1)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     root_logger = logging.getLogger()
