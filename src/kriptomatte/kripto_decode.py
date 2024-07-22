@@ -10,9 +10,6 @@ from kriptomatte.kripto_color import RandomColor
 import argparse
 from pathlib import Path
 
-kriptomatte.kripto_logger.Setup_Logger()
-logger = logging.getLogger(__name__)
-
 
 def Create_Folder_for_Crypto_layer(var_exr_file_path, var_crypto_layer_name):
     current_file_dirname = os.path.dirname(var_exr_file_path)
@@ -35,6 +32,9 @@ def get_args():
 def cli():
     args = get_args()
     exr_file_path = args['input_path']
+    kriptomatte.kripto_logger.Setup_Logger(exr_file_path)
+    logger = logging.getLogger(__name__)
+
     logger.info("Reading Sample Exr file")
     sample_exr = OpenEXR.InputFile(exr_file_path)
 
